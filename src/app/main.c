@@ -50,6 +50,7 @@ int main(void) {
     if (!core_CAN_init(FDCAN1, 1000000)) error_handler();
 
     core_ADC_init(ADC1);
+    core_RTT_init();
     core_ADC_setup_pin(GPIOA, GPIO_PIN_5, 0);
 
     int err = xTaskCreate(heartbeat_task, "heartbeat", 1000, NULL, 4, NULL);
