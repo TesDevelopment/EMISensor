@@ -4,6 +4,8 @@
 #include <stdio.h>
 
 #include "can.h"
+#include "adc.h"
+#include "rtt.h"
 #include "clock.h"
 #include "gpio.h"
 #include "error_handler.h"
@@ -24,17 +26,38 @@ void heartbeat_task(void *pvParameters) {
     }
 }
 
+void checkEMI(void* pvParameters) {
+    (void) pvParameters;
+
+    uint16_t res;
+    while (true)
+    {
+        bool passed = core_ADC_read_channel(GPIOA, GPIO_PIN_5, &res);
+        rprintf("EMI: %d", res);
+
+        vTaskDelay(1000 * portTICK_PERIOD_MS);
+    }
+    
+}
+
 int main(void) {
     HAL_Init();
 
-    // Drivers
-    core_heartbeat_init(GPIOA, GPIO_PIN_8);
+    core_heartbeat_init(GPIOA, GPIO_PIN_15);
     core_GPIO_set_heartbeat(GPIO_PIN_RESET);
 
     if (!core_clock_init()) error_handler();
     if (!core_CAN_init(FDCAN1, 1000000)) error_handler();
 
+    core_ADC_init(ADC1);
+    core_ADC_setup_pin(GPIOA, GPIO_PIN_5, 0);
+
     int err = xTaskCreate(heartbeat_task, "heartbeat", 1000, NULL, 4, NULL);
+    if (err != pdPASS) {
+        error_handler();
+    }
+
+    err = xTaskCreate(checkEMI, "EMISensor", 1000, NULL, 4, NULL);
     if (err != pdPASS) {
         error_handler();
     }
